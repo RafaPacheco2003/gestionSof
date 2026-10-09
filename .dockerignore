@@ -1,0 +1,56 @@
+# Dependencias
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Producción
+.vercel
+.env*.local
+.env.production
+
+# Testing
+coverage
+*.log
+
+# Misc
+.DS_Store
+*.pem
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentación (opcional, puedes comentar si quieres incluirla)
+README.md
+API_DOCUMENTATION.md
+GUIA_PRUEBAS.md
+ESTRUCTURA_PROYECTO.md
+DOCKER_DEPLOYMENT.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Temporal
+tmp
+temp
+*.tmp
