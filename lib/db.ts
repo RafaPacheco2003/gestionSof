@@ -33,6 +33,11 @@ export const db = {
       return usuarios.find(u => u.correo.toLowerCase() === correo.toLowerCase())
     },
 
+    // Buscar usuario por teléfono
+    findByTelefono: async (telefono: string): Promise<Usuario | undefined> => {
+      return usuarios.find(u => u.telefono.trim() === telefono.trim())
+    },
+
     // Buscar usuario por ID
     findById: async (id: number): Promise<Usuario | undefined> => {
       return usuarios.find(u => u.id === id)

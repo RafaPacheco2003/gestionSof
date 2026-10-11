@@ -33,9 +33,10 @@ export type RegistroUsuarioInput = z.infer<typeof registroUsuarioSchema>
 
 // Schema de validación para el login
 export const loginSchema = z.object({
-  nombre: z
-    .string({ required_error: 'El nombre es obligatorio' })
-    .min(1, 'El nombre es obligatorio')
+  correo: z
+    .string({ required_error: 'El correo es obligatorio' })
+    .email('El correo no tiene un formato válido')
+    .toLowerCase()
     .trim(),
   
   contrasena: z

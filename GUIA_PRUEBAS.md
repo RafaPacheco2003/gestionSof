@@ -49,6 +49,16 @@ Intenta registrarte con datos inválidos para ver los mensajes de error:
 - **Confirmar contraseña:** Clave4321
 - → Error: "Las contraseñas no coinciden"
 
+#### Correo duplicado:
+1. Registra un usuario con correo: "juan@escuela.com"
+2. Intenta registrar otro usuario con el mismo correo
+3. → Error: "El correo electrónico ya se encuentra registrado. Por favor, utiliza otro correo o inicia sesión."
+
+#### Teléfono duplicado:
+1. Registra un usuario con teléfono: "9991234567"
+2. Intenta registrar otro usuario con el mismo teléfono
+3. → Error: "El número de teléfono ya se encuentra registrado. Por favor, verifica el número ingresado."
+
 #### Nombre duplicado:
 1. Registra un usuario: "Juan Pérez"
 2. Intenta registrar otro usuario con el mismo nombre
@@ -57,22 +67,22 @@ Intenta registrarte con datos inválidos para ver los mensajes de error:
 ### 3. Probar Inicio de Sesión
 
 1. En la pantalla de login, ingresa:
-   - **Nombre:** Juan Pérez
+   - **Correo electrónico:** juan@escuela.com
    - **Contraseña:** Clave1234
 2. Haz click en "Iniciar sesión"
 3. ✅ Deberías acceder al dashboard
 
 ### 4. Probar Credenciales Incorrectas
 
-#### Nombre inexistente:
-- **Nombre:** UsuarioNoExiste
+#### Correo inexistente:
+- **Correo:** noexiste@escuela.com
 - **Contraseña:** cualquiera
-- → Error: "Nombre o contraseña incorrectos"
+- → Error: "Correo o contraseña incorrectos"
 
 #### Contraseña incorrecta:
-- **Nombre:** Juan Pérez
+- **Correo:** juan@escuela.com
 - **Contraseña:** ClaveIncorrecta
-- → Error: "Nombre o contraseña incorrectos"
+- → Error: "Correo o contraseña incorrectos"
 
 ### 5. Probar Cerrar Sesión
 
@@ -124,7 +134,7 @@ curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -c cookies.txt \
   -d '{
-    "nombre": "María García",
+    "correo": "maria@escuela.com",
     "contrasena": "MiClave123"
   }'
 ```

@@ -21,14 +21,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nombre, contrasena } = validation.data
+    const { correo, contrasena } = validation.data
 
-    // 3. Buscar el usuario por nombre
-    const usuario = await db.usuarios.findByNombre(nombre)
+    // 3. Buscar el usuario por correo
+    const usuario = await db.usuarios.findByCorreo(correo)
     
     if (!usuario) {
       return NextResponse.json(
-        { error: 'Nombre o contraseña incorrectos' },
+        { error: 'Correo o contraseña incorrectos' },
         { status: 401 }
       )
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     
     if (!contrasenaValida) {
       return NextResponse.json(
-        { error: 'Nombre o contraseña incorrectos' },
+        { error: 'Correo o contraseña incorrectos' },
         { status: 401 }
       )
     }

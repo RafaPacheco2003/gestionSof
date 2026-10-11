@@ -19,7 +19,7 @@ export interface UsuarioResponse {
 }
 
 export interface LoginRequest {
-  nombre: string
+  correo: string
   contrasena: string
 }
 

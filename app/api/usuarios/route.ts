@@ -23,9 +23,26 @@ export async function POST(request: NextRequest) {
 
     const { nombre, telefono, correo, puesto, contrasena } = validation.data
 
-    // 3. Verificar si el nombre ya está registrado
+    // 3. Verificar si el correo ya está registrado
+    const correoExistente = await db.usuarios.findByCorreo(correo)
+    if (correoExistente) {
+      return NextResponse.json(
+        { error: 'El correo electrónico ya se encuentra registrado. Por favor, utiliza otro correo o inicia sesión.' },
+        { status: 409 }
+      )
+    }
+
+    // 4. Verificar si el teléfono ya está registrado
+    const telefonoExistente = await db.usuarios.findByTelefono(telefono)
+    if (telefonoExistente) {
+      return NextResponse.json(
+        { error: 'El número de teléfono ya se encuentra registrado. Por favor, verifica el número ingresado.' },
+        { status: 409 }
+      )
+    }
+
+    // 5. Verificar si el nombre ya está registrado
     const usuarioExistente = await db.usuarios.findByNombre(nombre)
-    
     if (usuarioExistente) {
       return NextResponse.json(
         { error: 'Este nombre ya está registrado' },

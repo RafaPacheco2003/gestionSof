@@ -64,7 +64,19 @@ Posibles mensajes de error:
 - `"La contraseña es obligatoria"`
 - `"La contraseña debe tener mínimo 8 caracteres"`
 
-#### ❌ 409 Conflict - Nombre duplicado
+#### ❌ 409 Conflict - Datos duplicados
+```json
+{
+  "error": "El correo electrónico ya se encuentra registrado. Por favor, utiliza otro correo o inicia sesión."
+}
+```
+o
+```json
+{
+  "error": "El número de teléfono ya se encuentra registrado. Por favor, verifica el número ingresado."
+}
+```
+o
 ```json
 {
   "error": "Este nombre ya está registrado"
@@ -84,12 +96,12 @@ Posibles mensajes de error:
 
 **Endpoint:** `POST /api/auth/login`
 
-**Descripción:** Autentica a un usuario y genera una sesión.
+**Descripción:** Autentica a un usuario mediante su correo electrónico y contraseña, y genera una sesión.
 
 **Request Body:**
 ```json
 {
-  "nombre": "Juan Pérez",
+  "correo": "juan@escuela.com",
   "contrasena": "Clave1234"
 }
 ```
@@ -119,17 +131,17 @@ Posibles mensajes de error:
 #### ❌ 400 Bad Request - Error de validación
 ```json
 {
-  "error": "El nombre es obligatorio"
+  "error": "El correo es obligatorio"
 }
 ```
 
 #### ❌ 401 Unauthorized - Credenciales incorrectas
 ```json
 {
-  "error": "Nombre o contraseña incorrectos"
+  "error": "Correo o contraseña incorrectos"
 }
 ```
-> Nota: Este mismo mensaje se devuelve tanto si el nombre no existe como si la contraseña es incorrecta, por seguridad.
+> Nota: Este mismo mensaje se devuelve tanto si el correo no existe como si la contraseña es incorrecta, por seguridad.
 
 #### ❌ 500 Internal Server Error
 ```json
@@ -244,7 +256,7 @@ curl -X POST http://localhost:3000/api/usuarios \
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "nombre": "María García",
+    "correo": "maria@escuela.com",
     "contrasena": "MiClave123"
   }'
 ```
@@ -262,14 +274,15 @@ curl -X POST http://localhost:3000/api/auth/logout \
 ### US-01: Registro
 - ✅ Todos los campos son obligatorios
 - ✅ Nombre único validado
-- ✅ Teléfono: solo números, 10 dígitos
+- ✅ Correo electrónico único validado
+- ✅ Teléfono único validado: solo números, 10 dígitos
 - ✅ Correo con formato válido
 - ✅ Contraseña: mínimo 8 caracteres, guardada cifrada
 - ✅ Respuesta 201 no incluye la contraseña
-- ✅ Códigos de error: 400, 409, 500 según corresponda
+- ✅ Códigos de error: 400, 409, 500 según corresponda con mensajes claros
 
 ### US-02: Inicio de Sesión
-- ✅ Validación de nombre y contraseña
+- ✅ Autenticación por correo y contraseña
 - ✅ Mensaje genérico para credenciales incorrectas
 - ✅ Acceso al dashboard tras login exitoso
 - ✅ Función de cerrar sesión implementada
