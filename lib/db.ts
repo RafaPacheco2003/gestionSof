@@ -1,11 +1,24 @@
 // Sistema de base de datos en memoria (simulación)
 // En producción, esto se reemplazaría con una base de datos real (PostgreSQL, MongoDB, etc.)
 
-import type { Usuario } from './types'
+import type { Usuario, Solicitud, Ubicacion } from './types'
+
+// Catálogo de ubicaciones/edificios (datos fijos)
+const UBICACIONES: Ubicacion[] = [
+  { id: 1, edificio: 'Edificio A' },
+  { id: 2, edificio: 'Edificio B' },
+  { id: 3, edificio: 'Cancha' },
+  { id: 4, edificio: 'Biblioteca' },
+  { id: 5, edificio: 'Laboratorio' },
+]
 
 // Almacenamiento en memoria
 let usuarios: Usuario[] = []
 let nextId = 1
+
+// Almacenamiento de solicitudes en memoria
+let solicitudes: Solicitud[] = []
+let nextSolicitudId = 1
 
 // Tokens de sesión activos
 const activeSessions = new Set<string>()
@@ -49,6 +62,32 @@ export const db = {
     },
   },
 
+  solicitudes: {
+    // Crear una nueva solicitud
+    create: async (data: Omit<Solicitud, 'id' | 'fechaCreacion' | 'estado'>): Promise<Solicitud> => {
+      const nuevaSolicitud: Solicitud = {
+        ...data,
+        id: nextSolicitudId++,
+        estado: 'PENDIENTE',
+        fechaCreacion: new Date().toISOString().replace('Z', '').split('.')[0],
+      }
+      solicitudes.push(nuevaSolicitud)
+      return nuevaSolicitud
+    },
+
+    // Obtener todas las solicitudes
+    getAll: async (): Promise<Solicitud[]> => {
+      return solicitudes
+    },
+  },
+
+  ubicaciones: {
+    // Obtener el catálogo completo de ubicaciones
+    getAll: (): Ubicacion[] => {
+      return UBICACIONES
+    },
+  },
+
   sessions: {
     // Agregar una sesión activa
     add: (token: string): void => {
@@ -76,5 +115,7 @@ export const db = {
 export const resetDB = () => {
   usuarios = []
   nextId = 1
+  solicitudes = []
+  nextSolicitudId = 1
   activeSessions.clear()
 }

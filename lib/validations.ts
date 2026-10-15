@@ -46,6 +46,38 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>
 
+// Schema de validación para crear una solicitud (US-03)
+export const solicitudSchema = z.object({
+  nombre: z
+    .string({ required_error: 'El nombre es obligatorio' })
+    .min(1, 'El nombre es obligatorio')
+    .max(100, 'El nombre no puede exceder 100 caracteres')
+    .trim(),
+
+  descripcion: z
+    .string({ required_error: 'La descripcion es obligatoria' })
+    .min(1, 'La descripcion es obligatoria')
+    .trim(),
+
+  prioridad: z.enum(['ROJO', 'NARANJA', 'VERDE'], {
+    required_error: 'La prioridad es obligatoria',
+    error: 'Prioridad no válida',
+  }),
+
+  ubicacion: z.object({
+    edificio: z
+      .string({ required_error: 'El edificio es obligatorio' })
+      .min(1, 'El edificio es obligatorio')
+      .trim(),
+    area: z
+      .string({ required_error: 'El area es obligatoria' })
+      .min(1, 'El area es obligatoria')
+      .trim(),
+  }, { required_error: 'La ubicacion es obligatoria' }),
+})
+
+export type SolicitudInput = z.infer<typeof solicitudSchema>
+
 // Función auxiliar para validar datos
 export function validateData<T>(schema: z.ZodSchema<T>, data: unknown) {
   try {
