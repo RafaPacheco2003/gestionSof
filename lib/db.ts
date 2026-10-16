@@ -1,6 +1,8 @@
 // Sistema de base de datos en memoria (simulación)
 // En producción, esto se reemplazaría con una base de datos real (PostgreSQL, MongoDB, etc.)
 
+import bcrypt from 'bcryptjs'
+import { ROL_ADMIN } from './types'
 import type { Usuario, Solicitud, Ubicacion } from './types'
 
 // Catálogo de ubicaciones/edificios (datos fijos)
@@ -13,8 +15,19 @@ const UBICACIONES: Ubicacion[] = [
 ]
 
 // Almacenamiento en memoria
-let usuarios: Usuario[] = []
-let nextId = 1
+// Administrador hardcodeado (credenciales sobreescribibles por variables de entorno)
+const crearAdmin = (): Usuario => ({
+  id: 1,
+  nombre: 'Administrador',
+  telefono: '0000000000',
+  correo: (process.env.ADMIN_EMAIL || 'admin@manteniplus.com').toLowerCase(),
+  puesto: ROL_ADMIN,
+  contrasena: bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'Admin12345', 10),
+  createdAt: new Date(),
+})
+
+let usuarios: Usuario[] = [crearAdmin()]
+let nextId = 2
 
 // Almacenamiento de solicitudes en memoria
 let solicitudes: Solicitud[] = []
@@ -79,6 +92,11 @@ export const db = {
     getAll: async (): Promise<Solicitud[]> => {
       return solicitudes
     },
+
+    // Buscar solicitud por ID
+    findById: async (id: number): Promise<Solicitud | undefined> => {
+      return solicitudes.find(s => s.id === id)
+    },
   },
 
   ubicaciones: {
@@ -113,8 +131,8 @@ export const db = {
 
 // Función para resetear la base de datos (útil para desarrollo/testing)
 export const resetDB = () => {
-  usuarios = []
-  nextId = 1
+  usuarios = [crearAdmin()]
+  nextId = 2
   solicitudes = []
   nextSolicitudId = 1
   activeSessions.clear()

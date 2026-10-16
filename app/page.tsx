@@ -39,6 +39,15 @@ interface Ubicacion {
   edificio: string
 }
 
+interface AutorInfo {
+  nombre: string
+  telefono: string
+  puesto: string
+}
+
+// Roles con permiso de consultar datos del autor
+const ROLES_AUTORIZADOS_AUTOR = ['Encargado de mantenimiento', 'Administrador']
+
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const navItems = [
@@ -64,10 +73,15 @@ export default function Page() {
   const [authenticated, setAuthenticated] = useState(false)
   const [userData, setUserData]           = useState<any>(null)
   const [solicitudes, setSolicitudes]     = useState<Solicitud[]>([])
+  const [autorModal, setAutorModal]       = useState<{ solicitudId: number; nombre: string } | null>(null)
 
   const handleAuthSuccess = (user: any) => {
     setUserData(user)
     setAuthenticated(true)
+    fetch('/api/solicitudes')
+      .then(r => (r.ok ? r.json() : []))
+      .then((data: Solicitud[]) => setSolicitudes(data))
+      .catch(() => setSolicitudes([]))
   }
 
   const handleLogout = async () => {
@@ -77,6 +91,7 @@ export default function Page() {
       setUserData(null)
       setActive('Dashboard')
       setSolicitudes([])
+      setAutorModal(null)
     } catch (error) {
       console.error('Error al cerrar sesión:', error)
     }
@@ -151,7 +166,12 @@ export default function Page() {
           )}
 
           {active === 'Solicitudes' && (
-            <SolicitudesView solicitudes={solicitudes} setShowRequest={setShowRequest} />
+            <SolicitudesView
+              solicitudes={solicitudes}
+              setShowRequest={setShowRequest}
+              userRole={userRole}
+              onVerAutor={(id, nombre) => setAutorModal({ solicitudId: id, nombre })}
+            />
           )}
 
           {(active === 'Seguimiento' || active === 'Reportes') && (
@@ -169,6 +189,14 @@ export default function Page() {
         <RequestModal
           onClose={() => setShowRequest(false)}
           onCreated={handleSolicitudCreada}
+        />
+      )}
+
+      {autorModal && (
+        <AutorModal
+          solicitudId={autorModal.solicitudId}
+          solicitudNombre={autorModal.nombre}
+          onClose={() => setAutorModal(null)}
         />
       )}
     </main>
@@ -240,10 +268,13 @@ function DashboardView({ solicitudes, setActive, setShowRequest }: {
 
 // ── Vista Solicitudes ─────────────────────────────────────────────────────────
 
-function SolicitudesView({ solicitudes, setShowRequest }: {
+function SolicitudesView({ solicitudes, setShowRequest, userRole, onVerAutor }: {
   solicitudes: Solicitud[]
   setShowRequest: (v: boolean) => void
+  userRole: string
+  onVerAutor: (id: number, nombre: string) => void
 }) {
+  const puedeVerAutor = ROLES_AUTORIZADOS_AUTOR.includes(userRole)
   return (
     <div className="panel" style={{ marginTop: 0 }}>
       <div className="panel-heading">
@@ -279,8 +310,9 @@ function SolicitudesView({ solicitudes, setShowRequest }: {
                 <th>AUTOR</th>
                 <th>FECHA</th>
                 <th>ESTADO</th>
-              </tr>
-            </thead>
+                    {puedeVerAutor && <th>ACCIONES</th>}
+                  </tr>
+                </thead>
             <tbody>
               {solicitudes.map(s => (
                 <tr key={s.id}>
@@ -292,13 +324,70 @@ function SolicitudesView({ solicitudes, setShowRequest }: {
                   <td><PrioridadBadge p={s.prioridad} /></td>
                   <td>{s.autor}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{s.fechaCreacion.replace('T', ' ')}</td>
-                  <td><span className="status orange">Pendiente</span></td>
-                </tr>
+                    <td><span className="status orange">Pendiente</span></td>
+                      {puedeVerAutor && (
+                        <td>
+                          <button
+                            id={`btn-ver-autor-${s.id}`}
+                            onClick={() => onVerAutor(s.id, s.nombre)}
+                            style={{
+                              padding: '4px 10px', border: '1px solid #2b3a5a', borderRadius: 6,
+                              background: '#0d1a30', color: '#608bf5', fontSize: 10, fontWeight: 700,
+                              cursor: 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Ver autor
+                          </button>
+                        </td>
+                      )}
+                    </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Modal Datos del Autor ─────────────────────────────────────────────────────
+
+function AutorModal({ solicitudId, solicitudNombre, onClose }: {
+  solicitudId: number
+  solicitudNombre: string
+  onClose: () => void
+}) {
+  const [autor, setAutor]     = useState<AutorInfo | null>(null)
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/solicitudes/${solicitudId}/autor`)
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || 'No se pudo consultar el autor')
+        setAutor(data as AutorInfo)
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [solicitudId])
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="autor-title">
+      <div className="modal" style={{ width: 'min(480px,100%)' }}>
+        <button className="close-button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+        <p className="eyebrow">AUTOR DE LA SOLICITUD</p>
+        <h2 id="autor-title" style={{ margin: '0 0 16px' }}>{solicitudNombre}</h2>
+        {loading && <p>Cargando...</p>}
+        {error && <p style={{ color: '#f87171' }}>{error}</p>}
+        {autor && (
+          <dl style={{ display: 'grid', gap: 12, margin: 0 }}>
+            <div><dt style={{ color: '#a9b0bb', fontSize: 11 }}>Nombre</dt><dd style={{ margin: 0 }}>{autor.nombre}</dd></div>
+            <div><dt style={{ color: '#a9b0bb', fontSize: 11 }}>Teléfono</dt><dd style={{ margin: 0 }}>{autor.telefono}</dd></div>
+            <div><dt style={{ color: '#a9b0bb', fontSize: 11 }}>Puesto</dt><dd style={{ margin: 0 }}>{autor.puesto}</dd></div>
+          </dl>
+        )}
+      </div>
     </div>
   )
 }
@@ -615,7 +704,14 @@ function AuthScreen({ mode, onModeChange, onSuccess }: {
               <label>Nombre completo<input name="nombre" required placeholder="Ej. Juan Pérez" disabled={loading} /></label>
               <label>Teléfono<input name="telefono" required placeholder="9991234567" pattern="\d{10}" title="Debe tener 10 dígitos" disabled={loading} /></label>
               <label>Correo electrónico<input name="correo" required type="email" placeholder="juan@escuela.com" disabled={loading} /></label>
-              <label>Puesto<input name="puesto" required placeholder="Ej. Docente" disabled={loading} /></label>
+              <label>Puesto
+                <select name="puesto" required defaultValue="" disabled={loading}>
+                  <option value="" disabled>Selecciona tu puesto</option>
+                  <option value="Encargado de mantenimiento">Mantenimiento</option>
+                  <option value="Docente">Docente</option>
+                  <option value="Alumno">Alumno</option>
+                </select>
+              </label>
               <label>Contraseña<input name="contrasena" required type="password" placeholder="••••••••" minLength={8} disabled={loading} /></label>
               <label>Confirmar contraseña<input name="confirmarContrasena" required type="password" placeholder="••••••••" minLength={8} disabled={loading} /></label>
             </>

@@ -1,10 +1,32 @@
-// Endpoint: POST /api/solicitudes
+// Endpoints: GET /api/solicitudes (listado según rol) y POST /api/solicitudes (US-03)
 // Historia de Usuario: US-03 - Registrar problema detectado en la escuela
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 import { validateData, solicitudSchema } from '@/lib/validations'
+import { getSesion } from '@/lib/session'
+import { ROLES_PRIVILEGIADOS } from '@/lib/types'
+
+// Mantenimiento/Administrador ven todas; Docentes y Alumnos solo las suyas
+export async function GET(request: NextRequest) {
+  try {
+    const sesion = await getSesion(request)
+    if (!sesion) {
+      return NextResponse.json({ error: 'Sesión no válida' }, { status: 401 })
+    }
+
+    const todas = await db.solicitudes.getAll()
+    const visibles = ROLES_PRIVILEGIADOS.includes(sesion.puesto)
+      ? todas
+      : todas.filter(s => s.autorId === sesion.userId)
+
+    return NextResponse.json([...visibles].reverse(), { status: 200 })
+  } catch (error) {
+    console.error('Error en GET /api/solicitudes:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Obtener nombre del autor desde el payload del token
     const autor = (tokenResult.payload as { nombre?: string }).nombre ?? 'Desconocido'
+    const autorId = (tokenResult.payload as { userId: number }).userId
 
     // 4. Parsear y validar el body de la petición
     const body = await request.json()
@@ -58,6 +81,7 @@ export async function POST(request: NextRequest) {
       prioridad,
       ubicacion,
       autor,
+      autorId,
     })
 
     // 6. Retornar la solicitud creada (201 Created)

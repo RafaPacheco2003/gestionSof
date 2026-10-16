@@ -1,5 +1,9 @@
 // Tipos principales para el sistema de usuarios
 
+export const ROLES_REGISTRO = ['Encargado de mantenimiento', 'Docente', 'Alumno'] as const
+export const ROL_ADMIN = 'Administrador'
+export const ROLES_PRIVILEGIADOS: string[] = ['Encargado de mantenimiento', ROL_ADMIN]
+
 export interface Usuario {
   id: number
   nombre: string
@@ -44,6 +48,7 @@ export interface Solicitud {
   estado: 'PENDIENTE'
   ubicacion: UbicacionSolicitud
   autor: string
+  autorId: number
   fechaCreacion: string
 }
 
@@ -58,4 +63,12 @@ export interface SolicitudRequest {
 export interface Ubicacion {
   id: number
   edificio: string
+}
+
+// Respuesta de datos del autor (solo para roles autorizados)
+export interface AutorResponse {
+  id?: number
+  nombre: string
+  telefono: string
+  puesto: string
 }
