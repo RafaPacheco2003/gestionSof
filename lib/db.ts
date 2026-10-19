@@ -3,7 +3,7 @@
 
 import bcrypt from 'bcryptjs'
 import { ROL_ADMIN } from './types'
-import type { Usuario, Solicitud, Ubicacion } from './types'
+import type { Usuario, Solicitud, Ubicacion, EstadoSolicitud } from './types'
 
 // Catálogo de ubicaciones/edificios (datos fijos)
 const UBICACIONES: Ubicacion[] = [
@@ -77,11 +77,12 @@ export const db = {
 
   solicitudes: {
     // Crear una nueva solicitud
-    create: async (data: Omit<Solicitud, 'id' | 'fechaCreacion' | 'estado'>): Promise<Solicitud> => {
+    create: async (data: Omit<Solicitud, 'id' | 'fechaCreacion' | 'estado' | 'fechaSolucion'>): Promise<Solicitud> => {
       const nuevaSolicitud: Solicitud = {
         ...data,
         id: nextSolicitudId++,
         estado: 'PENDIENTE',
+        fechaSolucion: null,
         fechaCreacion: new Date().toISOString().replace('Z', '').split('.')[0],
       }
       solicitudes.push(nuevaSolicitud)
@@ -96,6 +97,17 @@ export const db = {
     // Buscar solicitud por ID
     findById: async (id: number): Promise<Solicitud | undefined> => {
       return solicitudes.find(s => s.id === id)
+    },
+
+    // Cambiar estado; fechaSolucion solo se guarda al pasar a SOLUCIONADO
+    updateEstado: async (id: number, estado: EstadoSolicitud): Promise<Solicitud | undefined> => {
+      const solicitud = solicitudes.find(s => s.id === id)
+      if (!solicitud) return undefined
+      solicitud.estado = estado
+      solicitud.fechaSolucion = estado === 'SOLUCIONADO'
+        ? new Date().toISOString().replace('Z', '').split('.')[0]
+        : null
+      return solicitud
     },
   },
 

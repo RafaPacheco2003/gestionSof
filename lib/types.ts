@@ -40,12 +40,16 @@ export interface UbicacionSolicitud {
   area: string
 }
 
+export type EstadoSolicitud = 'PENDIENTE' | 'EN_PROCESO' | 'SOLUCIONADO'
+export const ESTADOS_SOLICITUD: readonly string[] = ['PENDIENTE', 'EN_PROCESO', 'SOLUCIONADO']
+
 export interface Solicitud {
   id: number
   nombre: string
   descripcion: string
   prioridad: PrioridadSolicitud
-  estado: 'PENDIENTE'
+  estado: EstadoSolicitud
+  fechaSolucion: string | null
   ubicacion: UbicacionSolicitud
   autor: string
   autorId: number

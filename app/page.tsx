@@ -23,12 +23,20 @@ import {
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
+type EstadoSolicitud = 'PENDIENTE' | 'EN_PROCESO' | 'SOLUCIONADO'
+
+const ESTADO_LABEL: Record<EstadoSolicitud, string> = {
+  PENDIENTE: 'Pendiente',
+  EN_PROCESO: 'En proceso',
+  SOLUCIONADO: 'Solucionado',
+}
+
 interface Solicitud {
   id: number
   nombre: string
   descripcion: string
   prioridad: 'ROJO' | 'NARANJA' | 'VERDE'
-  estado: 'PENDIENTE'
+  estado: EstadoSolicitud
   ubicacion: { edificio: string; area: string }
   autor: string
   fechaCreacion: string
@@ -174,7 +182,16 @@ export default function Page() {
             />
           )}
 
-          {(active === 'Seguimiento' || active === 'Reportes') && (
+          {active === 'Seguimiento' && (
+            <TableroKanban
+              puedeMover={ROLES_AUTORIZADOS_AUTOR.includes(userRole)}
+              onEstadoCambiado={(id, estado) =>
+                setSolicitudes(prev => prev.map(s => (s.id === id ? { ...s, estado } : s)))
+              }
+            />
+          )}
+
+          {active === 'Reportes' && (
             <div className="panel empty-state">
               <div className="empty-icon"><FileText size={25} /></div>
               <h2>{active}</h2>
@@ -217,8 +234,8 @@ function DashboardView({ solicitudes, setActive, setShowRequest }: {
       <div className="stats-grid">
         <Stat icon={ClipboardList} label="Solicitudes totales"  value={String(solicitudes.length)} detail="Registradas en el sistema" tone="orange" />
         <Stat icon={CalendarDays}  label="Pendientes"           value={String(solicitudes.filter(s => s.estado === 'PENDIENTE').length)} detail="Por atender" tone="yellow" />
-        <Stat icon={Check}         label="Urgentes (Rojo)"      value={String(solicitudes.filter(s => s.prioridad === 'ROJO').length)} detail="Atención inmediata" tone="green" />
-        <Stat icon={Users}         label="Esta sesión"          value={String(solicitudes.length)} detail="Solicitudes creadas" tone="blue" />
+        <Stat icon={Check}         label="Solucionadas"        value={String(solicitudes.filter(s => s.estado === 'SOLUCIONADO').length)} detail="Atendidas" tone="green" />
+        <Stat icon={Users}         label="En proceso"          value={String(solicitudes.filter(s => s.estado === 'EN_PROCESO').length)} detail="En atención" tone="blue" />
       </div>
 
       <div className="section-grid">
@@ -244,7 +261,7 @@ function DashboardView({ solicitudes, setActive, setShowRequest }: {
                       <td className="strong">{s.nombre}</td>
                       <td>{s.ubicacion.edificio} · {s.ubicacion.area}</td>
                       <td><PrioridadBadge p={s.prioridad} /></td>
-                      <td><span className="status orange">Pendiente</span></td>
+                      <td><span className="status orange">{ESTADO_LABEL[s.estado]}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -324,7 +341,7 @@ function SolicitudesView({ solicitudes, setShowRequest, userRole, onVerAutor }: 
                   <td><PrioridadBadge p={s.prioridad} /></td>
                   <td>{s.autor}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>{s.fechaCreacion.replace('T', ' ')}</td>
-                    <td><span className="status orange">Pendiente</span></td>
+                    <td><span className="status orange">{ESTADO_LABEL[s.estado]}</span></td>
                       {puedeVerAutor && (
                         <td>
                           <button
@@ -762,6 +779,169 @@ function Quick({ icon: Icon, title, text, onClick }: {
       <span><strong>{title}</strong><small>{text}</small></span>
       <span className="arrow">→</span>
     </button>
+  )
+}
+
+// ── Tablero Kanban (Seguimiento) ──────────────────────────────────────────────
+
+interface TarjetaTablero {
+  id: number
+  nombre: string
+  prioridad: 'ROJO' | 'NARANJA' | 'VERDE'
+  ubicacion: string
+  autor: string
+}
+
+interface Tablero {
+  pendiente: TarjetaTablero[]
+  enProceso: TarjetaTablero[]
+  solucionado: TarjetaTablero[]
+}
+
+const COLUMNAS_TABLERO: { key: keyof Tablero; estado: EstadoSolicitud; titulo: string }[] = [
+  { key: 'pendiente', estado: 'PENDIENTE', titulo: 'Pendiente' },
+  { key: 'enProceso', estado: 'EN_PROCESO', titulo: 'En proceso' },
+  { key: 'solucionado', estado: 'SOLUCIONADO', titulo: 'Solucionado' },
+]
+
+const COLOR_TARJETA: Record<TarjetaTablero['prioridad'], { fondo: string; borde: string }> = {
+  ROJO:    { fondo: '#5c1111', borde: '#ef4444' },
+  NARANJA: { fondo: '#5c3208', borde: '#f97316' },
+  VERDE:   { fondo: '#0f3d1d', borde: '#22c55e' },
+}
+
+function TableroKanban({ puedeMover, onEstadoCambiado }: {
+  puedeMover: boolean
+  onEstadoCambiado: (id: number, estado: EstadoSolicitud) => void
+}) {
+  const [tablero, setTablero] = useState<Tablero | null>(null)
+  const [error, setError]     = useState('')
+  const [detalleId, setDetalleId] = useState<number | null>(null)
+
+  const cargar = () =>
+    fetch('/api/seguimiento/tablero')
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || 'No se pudo cargar el tablero')
+        setTablero(data as Tablero)
+      })
+      .catch((e: Error) => setError(e.message))
+
+  useEffect(() => { cargar() }, [])
+
+  const mover = async (id: number, estado: EstadoSolicitud) => {
+    setError('')
+    try {
+      const r = await fetch(`/api/solicitudes/${id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'No se pudo mover la solicitud')
+      onEstadoCambiado(id, estado)
+      await cargar()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  if (!tablero) return error ? <p style={{ color: '#f87171' }}>{error}</p> : <p style={{ color: '#fb923c' }}>Cargando...</p>
+
+  return (
+    <>
+    {error && <p style={{ color: '#f87171' }}>{error}</p>}
+    <div style={{ background: '#000', padding: 16, borderRadius: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+      {COLUMNAS_TABLERO.map(({ key, titulo, estado: estadoColumna }) => (
+        <section key={key} aria-label={titulo} style={{ border: '2px solid #fff', borderRadius: 10, padding: 12, minHeight: 240, color: '#fb923c' }}>
+          <h2 style={{ margin: '0 0 12px', fontSize: 15, color: '#fb923c', borderBottom: '1px solid #fff', paddingBottom: 8 }}>
+            {titulo} ({tablero[key].length})
+          </h2>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {tablero[key].map(t => (
+              <article key={t.id} style={{ background: COLOR_TARJETA[t.prioridad].fondo, border: `2px solid ${COLOR_TARJETA[t.prioridad].borde}`, borderRadius: 8, padding: 10, color: '#fb923c', fontSize: 12 }}>
+                <strong style={{ display: 'block', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+                  role="button" tabIndex={0} onClick={() => setDetalleId(t.id)}
+                  onKeyDown={e => { if (e.key === 'Enter') setDetalleId(t.id) }}>#{t.id} {t.nombre}</strong>
+                <div>Prioridad: {t.prioridad}</div>
+                <div>{t.ubicacion}</div>
+                <div>{t.autor}</div>
+                {puedeMover && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                    {COLUMNAS_TABLERO.filter(c => c.estado !== estadoColumna).map(c => (
+                      <button key={c.estado} onClick={() => mover(t.id, c.estado)}
+                        style={{ background: '#000', color: '#fb923c', border: '1px solid #fff', borderRadius: 5, padding: '3px 8px', fontSize: 10, cursor: 'pointer' }}>
+                        → {c.titulo}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+    {detalleId !== null && <DetalleSolicitudModal id={detalleId} onClose={() => setDetalleId(null)} />}
+    </>
+  )
+}
+
+interface SolicitudDetalle {
+  id: number
+  nombre: string
+  descripcion: string
+  prioridad: 'ROJO' | 'NARANJA' | 'VERDE'
+  estado: EstadoSolicitud
+  ubicacion: { edificio: string; area: string }
+  autor: { nombre: string; puesto: string | null; telefono: string | null }
+  fechaCreacion: string
+  fechaSolucion: string | null
+}
+
+function DetalleSolicitudModal({ id, onClose }: { id: number; onClose: () => void }) {
+  const [data, setData]       = useState<SolicitudDetalle | null>(null)
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/solicitudes/${id}`)
+      .then(async r => {
+        const body = await r.json()
+        if (!r.ok) throw new Error(body.error || 'No se pudo consultar la solicitud')
+        setData(body as SolicitudDetalle)
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  const campo = (label: string, valor: string | null | undefined) => (
+    <div><dt style={{ color: '#a9b0bb', fontSize: 11 }}>{label}</dt><dd style={{ margin: 0 }}>{valor ?? '—'}</dd></div>
+  )
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="detalle-title">
+      <div className="modal" style={{ width: 'min(520px,100%)' }}>
+        <button className="close-button" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
+        <p className="eyebrow">DETALLE DE LA SOLICITUD</p>
+        <h2 id="detalle-title" style={{ margin: '0 0 16px' }}>{data ? `#${data.id} ${data.nombre}` : 'Solicitud'}</h2>
+        {loading && <p>Cargando...</p>}
+        {error && <p style={{ color: '#f87171' }}>{error}</p>}
+        {data && (
+          <dl style={{ display: 'grid', gap: 12, margin: 0 }}>
+            {campo('Descripción', data.descripcion)}
+            {campo('Prioridad', data.prioridad)}
+            {campo('Estado', ESTADO_LABEL[data.estado])}
+            {campo('Ubicación', `${data.ubicacion.edificio} - ${data.ubicacion.area}`)}
+            {campo('Autor', data.autor.nombre)}
+            {campo('Puesto', data.autor.puesto)}
+            {campo('Teléfono', data.autor.telefono)}
+            {campo('Fecha de creación', data.fechaCreacion.replace('T', ' '))}
+            {campo('Fecha de solución', data.fechaSolucion?.replace('T', ' '))}
+          </dl>
+        )}
+      </div>
+    </div>
   )
 }
 
