@@ -13,6 +13,12 @@ interface TarjetaTablero {
   autor: string
 }
 
+const ORDEN_PRIORIDAD: Record<Solicitud['prioridad'], number> = {
+  ROJO: 0,
+  NARANJA: 1,
+  VERDE: 2,
+}
+
 export async function GET(request: NextRequest) {
   try {
     const sesion = await getSesion(request)
@@ -37,6 +43,10 @@ export async function GET(request: NextRequest) {
       if (s.estado === 'EN_PROCESO') tablero.enProceso.push(tarjeta)
       else if (s.estado === 'SOLUCIONADO') tablero.solucionado.push(tarjeta)
       else tablero.pendiente.push(tarjeta)
+    }
+
+    for (const columna of Object.values(tablero)) {
+      columna.sort((a, b) => ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad])
     }
 
     return NextResponse.json(tablero, { status: 200 })

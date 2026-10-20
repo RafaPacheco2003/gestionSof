@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import {
   AlertCircle,
   BarChart3,
-  Bell,
   CalendarDays,
   Check,
   ChevronDown,
@@ -16,7 +15,6 @@ import {
   Menu,
   Plus,
   Search,
-  Settings,
   Users,
   X,
 } from 'lucide-react'
@@ -81,6 +79,7 @@ export default function Page() {
   const [authenticated, setAuthenticated] = useState(false)
   const [userData, setUserData]           = useState<any>(null)
   const [solicitudes, setSolicitudes]     = useState<Solicitud[]>([])
+  const [tableroRevision, setTableroRevision] = useState(0)
   const [autorModal, setAutorModal]       = useState<{ solicitudId: number; nombre: string } | null>(null)
 
   const handleAuthSuccess = (user: any) => {
@@ -107,6 +106,7 @@ export default function Page() {
 
   const handleSolicitudCreada = (nueva: Solicitud) => {
     setSolicitudes(prev => [nueva, ...prev])
+    setTableroRevision(revision => revision + 1)
     setShowRequest(false)
   }
 
@@ -136,7 +136,6 @@ export default function Page() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <button className="nav-item"><Settings size={18} /><span>Configuración</span></button>
           <button className="nav-item" onClick={handleLogout}><LogOut size={18} /><span>Cerrar sesión</span></button>
           <div className="profile">
             <div className="avatar">{userInitials}</div>
@@ -152,8 +151,7 @@ export default function Page() {
           <div className="breadcrumb"><span>Inicio</span><span>/</span><strong>{active}</strong></div>
           <div className="top-actions">
             <button className="icon-button" aria-label="Buscar"><Search size={18} /></button>
-            <button className="icon-button notification" aria-label="Notificaciones"><Bell size={18} /><i /></button>
-            <div className="top-user"><div className="avatar small">{userInitials}</div><span>{userName}</span><ChevronDown size={14} /></div>
+            <div className="top-user"><div className="avatar small">{userInitials}</div><span>{userName}<small style={{ display: 'block', color: '#8e98a6', fontSize: 10 }}>{userRole}</small></span></div>
           </div>
         </header>
 
@@ -185,6 +183,7 @@ export default function Page() {
           {active === 'Seguimiento' && (
             <TableroKanban
               puedeMover={ROLES_AUTORIZADOS_AUTOR.includes(userRole)}
+              revision={tableroRevision}
               onEstadoCambiado={(id, estado) =>
                 setSolicitudes(prev => prev.map(s => (s.id === id ? { ...s, estado } : s)))
               }
@@ -806,12 +805,19 @@ const COLUMNAS_TABLERO: { key: keyof Tablero; estado: EstadoSolicitud; titulo: s
 
 const COLOR_TARJETA: Record<TarjetaTablero['prioridad'], { fondo: string; borde: string }> = {
   ROJO:    { fondo: '#5c1111', borde: '#ef4444' },
-  NARANJA: { fondo: '#5c3208', borde: '#f97316' },
+  NARANJA: { fondo: '#51440a', borde: '#eab308' },
   VERDE:   { fondo: '#0f3d1d', borde: '#22c55e' },
 }
 
-function TableroKanban({ puedeMover, onEstadoCambiado }: {
+const ORDEN_PRIORIDAD_TABLERO: Record<TarjetaTablero['prioridad'], number> = {
+  ROJO: 0,
+  NARANJA: 1,
+  VERDE: 2,
+}
+
+function TableroKanban({ puedeMover, revision, onEstadoCambiado }: {
   puedeMover: boolean
+  revision: number
   onEstadoCambiado: (id: number, estado: EstadoSolicitud) => void
 }) {
   const [tablero, setTablero] = useState<Tablero | null>(null)
@@ -827,7 +833,7 @@ function TableroKanban({ puedeMover, onEstadoCambiado }: {
       })
       .catch((e: Error) => setError(e.message))
 
-  useEffect(() => { cargar() }, [])
+  useEffect(() => { cargar() }, [revision])
 
   const mover = async (id: number, estado: EstadoSolicitud) => {
     setError('')
@@ -858,7 +864,7 @@ function TableroKanban({ puedeMover, onEstadoCambiado }: {
             {titulo} ({tablero[key].length})
           </h2>
           <div style={{ display: 'grid', gap: 10 }}>
-            {tablero[key].map(t => (
+            {[...tablero[key]].sort((a, b) => ORDEN_PRIORIDAD_TABLERO[a.prioridad] - ORDEN_PRIORIDAD_TABLERO[b.prioridad]).map(t => (
               <article key={t.id} style={{ background: COLOR_TARJETA[t.prioridad].fondo, border: `2px solid ${COLOR_TARJETA[t.prioridad].borde}`, borderRadius: 8, padding: 10, color: '#fb923c', fontSize: 12 }}>
                 <strong style={{ display: 'block', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
                   role="button" tabIndex={0} onClick={() => setDetalleId(t.id)}
