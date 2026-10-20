@@ -140,7 +140,7 @@ export default function Page() {
           <div className="profile">
             <div className="avatar">{userInitials}</div>
             <div><strong>{userName}</strong><small>{userRole}</small></div>
-            <ChevronDown size={15} />
+            
           </div>
         </div>
       </aside>
