@@ -69,6 +69,8 @@ const PRIORIDAD_CONFIG = {
   VERDE:   { label: 'Bajo (Verde)',       dot: '#22c55e' },
 } as const
 
+const ORDEN_PRIORIDAD = { ROJO: 0, NARANJA: 1, VERDE: 2 } as const
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function Page() {
@@ -291,6 +293,9 @@ function SolicitudesView({ solicitudes, setShowRequest, userRole, onVerAutor }: 
   onVerAutor: (id: number, nombre: string) => void
 }) {
   const puedeVerAutor = ROLES_AUTORIZADOS_AUTOR.includes(userRole)
+  const solicitudesOrdenadas = [...solicitudes].sort(
+    (a, b) => ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad]
+  )
   return (
     <div className="panel" style={{ marginTop: 0 }}>
       <div className="panel-heading">
@@ -330,7 +335,7 @@ function SolicitudesView({ solicitudes, setShowRequest, userRole, onVerAutor }: 
                   </tr>
                 </thead>
             <tbody>
-              {solicitudes.map(s => (
+              {solicitudesOrdenadas.map(s => (
                 <tr key={s.id}>
                   <td className="muted">#{s.id}</td>
                   <td className="strong">{s.nombre}</td>

@@ -8,6 +8,8 @@ import { validateData, solicitudSchema } from '@/lib/validations'
 import { getSesion } from '@/lib/session'
 import { ROLES_PRIVILEGIADOS } from '@/lib/types'
 
+const ORDEN_PRIORIDAD = { ROJO: 0, NARANJA: 1, VERDE: 2 } as const
+
 // Mantenimiento/Administrador ven todas; Docentes y Alumnos solo las suyas
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +23,11 @@ export async function GET(request: NextRequest) {
       ? todas
       : todas.filter(s => s.autorId === sesion.userId)
 
-    return NextResponse.json([...visibles].reverse(), { status: 200 })
+    const ordenadas = [...visibles].sort(
+      (a, b) => ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad]
+    )
+
+    return NextResponse.json(ordenadas, { status: 200 })
   } catch (error) {
     console.error('Error en GET /api/solicitudes:', error)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
